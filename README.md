@@ -17,7 +17,17 @@ These are the following dependencies on Arch Linux:
 
 Create an empty folder, e.g., `my-haskell-packages`.
 
+### Patch Folder
+
 You *must* have an empty folder named `patch` within this folder.
+This folder will be accessed by `cblrepo` to generate the proper PKGBUILD; you can have 3 kinds of patches:
+  - <hackage_package_name>.cabal
+  - <hackage_package_name>.pkgbuild
+  - <hackage_package_name>.source
+Essentially, the idea is to patch any misbehaving Hackage packages so that a proper, working Arch Linux package can be generated.
+Refer to the [cblrepo](https://github.com/magthe/cblrepo) documentation for further explanation.
+
+### Database Generation, PKGBUILD Creation, and Package Installation
 
 Go into this folder, and create a file listing all Hackage packages, one on each line, that you'd like to create PKGBUIKLDs for.
 This is called the "<hackage_packages_file>" file by convention.
