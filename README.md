@@ -30,7 +30,7 @@ Refer to the [cblrepo](https://github.com/magthe/cblrepo) documentation for furt
 ### Database Generation, PKGBUILD Creation, and Package Installation
 
 Go into this folder, and create a file listing all Hackage packages, one on each line, that you'd like to create PKGBUIKLDs for.
-This is called the "<hackage_packages_file>" file by convention.
+This is called the `<hackage_packages_file>` file by convention.
 
 Then, run the script 3 times:
 
