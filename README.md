@@ -32,7 +32,35 @@ Refer to the [cblrepo](https://github.com/magthe/cblrepo) documentation for furt
 Go into this folder, and create a file listing all Hackage packages, one on each line, that you'd like to create PKGBUIKLDs for.
 This is called the `<hackage_packages_file>` file by convention.
 
-Then, run the script 3 times:
+The following is a sample `<hackage_pacakges_file>` file:
+
+```
+bindings-DSL
+bindings-GLFW
+GLFW-b
+transformers-compat
+contravariant
+distributive
+comonad
+semigroupoids
+bifunctors
+generic-deriving
+profunctors
+reflection
+distributive
+MonadCatchIO-transformers
+lens
+linear
+rosezipper
+elerea
+mersenne-random
+vect
+netwire
+```
+
+As you can see, the names of the packages are taken directly from the Hackage site (i.e., the case-sensitivity matches the original names on Hackage).
+
+We now run the script 3 times:
 
 ```
 /path/to/cabal2pkgbuild.sh <hackage_packages_file> initdb-sync
