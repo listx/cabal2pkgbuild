@@ -32,6 +32,14 @@ case $mode in
 	(initdb|initdb-sync)
 	rm -fv cblrepo.db
 
+	# Add `ghc` itself
+	ghcversion=$(pacman -Q ghc | cut -d " " -f2 | sed 's/-/,/')
+	command="cblrepo add --distro-pkg ghc,$ghcversion"
+	# Tell user what we are going to do.
+	echo $command
+	# Actually execute the command.
+	eval $command
+
 	# Add packages provided by GHC
 
 	# Pacman provides information about which modules are exposed by installing the
@@ -44,9 +52,7 @@ case $mode in
 		# each '=' sign with a ',', as per cblrepo's requirements.
 		package=$(echo $p | cut -c9- | sed 's/=/,/')
 		command="cblrepo add --ghc-pkg $package"
-		# Tell user what we are going to do.
 		echo $command
-		# Actually execute the command.
 		eval $command
 	done
 
