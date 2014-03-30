@@ -66,9 +66,35 @@ case $mode in
 	# repository.
 	installed_filtered=(${installed:|hackage_lowercased})
 
-	for p in $installed_filtered; do
+	# Some packages have upper case letters in their names, but pacman only
+	# uses lower case, so it is necessary to filter these packages and add them
+	# to the database with their proper, mixed case names.
+	upperpkgs=($(ghc-pkg list --names-only --simple-output | tr ' ' '\n' | grep '[A-Z]'))
+	upperpkgslower=(${upperpkgs:l})
+	# The following are the lower case packages
+	installed_filtered_lower=(${installed_filtered:|upperpkgslower})
+	# ghc-pkg, but not pacman, lists the following
+	installed_filtered_notpacman=(${upperpkgslower:|installed_filtered})
+	# The following are the upper case packages
+	installed_filtered_upper=(${upperpkgslower:|installed_filtered_notpacman})
+
+	for p in $installed_filtered_lower; do
 		version=$(pacman -Q haskell-$p | cut -d " " -f2 | sed 's/-/,/')
 		command="cblrepo add --distro-pkg $p,$version"
+		echo $command
+		eval $command
+	done
+
+	for pg in $upperpkgs; do
+		# Check if lower case version of name is in correct array, and return
+		# "" if not
+		p="${pg:l}"
+		# Do not carry on if there is no package in the pacman list
+		if [[ -z ${installed_filtered_upper[(r)$p]} ]]; then
+			continue
+		fi
+		version=$(pacman -Q haskell-$p | cut -d " " -f2 | sed 's/-/,/')
+		command="cblrepo add --distro-pkg $pg,$version"
 		echo $command
 		eval $command
 	done
