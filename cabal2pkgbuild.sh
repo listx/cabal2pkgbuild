@@ -107,10 +107,12 @@ case $mode in
 	fi
 
 	# Add packages from Hackage
+	mkdir -p cache
 	for hp in $hackage_packages_file; do
 		# Grab latest version of package
 		cabal_file=$(curl -s $hackage_url/package/$hp | grep -ioE "Cabal source package[)<>/lia href=\"]+\/package\/.+\.cabal" | grep -ioE "\/package.+")
-		command="cblrepo add --patchdir patch --cbl-url $hackage_url$cabal_file"
+		[ ! -e cache$cabal_file ] && aria2c $hackage_url$cabal_file -o cache$cabal_file -q
+		command="cblrepo add --patchdir patch -f cache$cabal_file"
 		echo $command
 		eval $command
 	done
