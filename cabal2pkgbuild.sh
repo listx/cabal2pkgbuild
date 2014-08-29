@@ -155,8 +155,7 @@ case $mode in
 		if (( $install_pkg )); then
 			cd $hpkg
 			echo $hpkg
-			makepkg -sf
-			sudo pacman -U $hpkg-*.pkg.tar.xz
+			makepkg -sif
 			cd ..
 			echo
 			echo "  Finished making/installing package \`$hpkg'"
