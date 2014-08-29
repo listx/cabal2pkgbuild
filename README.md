@@ -1,7 +1,6 @@
 # cabal2pkgbuild
 
 `cabal2pkgbuild` is a script used to generate proper PKGBUILD files from any `.cabal` file from Hackage, with the help of `cblrepo` (which is currently used to maintain Haskell packages on Arch Linux).
-This version uses aria2 to download and caches cabal files. If you want to remove cache, just remove the cache folder.
 
 ## Dependencies
 
@@ -13,7 +12,6 @@ These are the following dependencies on Arch Linux:
 - pacman
 - sed
 - zsh
-- aria2
 
 ## Usage
 
@@ -21,7 +19,7 @@ Create an empty folder, e.g., `my-haskell-packages`.
 
 ### Patch Folder
 
-You should have an empty folder named `patch` within this folder.
+You *must* have an empty folder named `patch` within this folder.
 This folder will be accessed by `cblrepo` to generate the proper PKGBUILD; you can have 3 kinds of patches:
 
   - <hackage_package_name>.cabal
@@ -70,7 +68,7 @@ It takes some trial and error to get this right (the `initdb-sync` mode will out
 We now run the script 3 times:
 
 ```
-/path/to/cabal2pkgbuild.sh <hackage_packages_file> initdb-sync (or initdb)
+/path/to/cabal2pkgbuild.sh <hackage_packages_file> initdb-sync
 /path/to/cabal2pkgbuild.sh <hackage_packages_file> pkgbuild
 /path/to/cabal2pkgbuild.sh <hackage_packages_file> makepkg
 ```
