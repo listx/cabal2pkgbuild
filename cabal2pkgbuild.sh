@@ -56,7 +56,8 @@ case $mode in
 		eval $command
 	done
 
-	# Add packages installed by the user from [haskell-core] or some other Arch Linux repository
+	# Add packages installed by the user from [haskell-core] or some other Arch
+	# Linux repository
 	installed=($(pacman -Qq | grep "^haskell-" | sed 's/^haskell-//'))
 	# Filter out those packages that were installed from Hackage using this very
 	# same script (in Arch Linux, the hackage packages, once installed, are in
@@ -69,7 +70,11 @@ case $mode in
 	# Some packages have upper case letters in their names, but pacman only
 	# uses lower case, so it is necessary to filter these packages and add them
 	# to the database with their proper, mixed case names.
-	upperpkgs=($(ghc-pkg list --names-only --simple-output | tr ' ' '\n' | grep '[A-Z]'))
+	upperpkgs=(
+		$(ghc-pkg list --names-only --simple-output\
+			| tr ' ' '\n'\
+			| grep '[A-Z]')
+	)
 	upperpkgslower=(${upperpkgs:l})
 	# The following are the lower case packages
 	installed_filtered_lower=(${installed_filtered:|upperpkgslower})
@@ -110,8 +115,12 @@ case $mode in
 	mkdir -p cache
 	for hp in $hackage_packages_file; do
 		# Grab latest version of package
-		cabal_file=$(curl -s $hackage_url/package/$hp | grep -ioE "Cabal source package[)<>/lia href=\"]+\/package\/.+\.cabal" | grep -ioE "\/package.+")
-		[ ! -e cache$cabal_file ] && curl -# -C - -f $hackage_url$cabal_file -o cache$cabal_file --create-dirs
+		cabal_file=$(curl -s $hackage_url/package/$hp\
+			| grep -ioE "source package[)<>/lia href=\"]+\/package\/.+\.cabal"\
+			| grep -ioE "\/package.+")
+		[ ! -e cache$cabal_file ]\
+			&& curl -# -C - -f $hackage_url$cabal_file\
+			-o cache$cabal_file --create-dirs
 		command="cblrepo add --patchdir patch -f cache$cabal_file"
 		echo $command
 		eval $command
@@ -141,16 +150,16 @@ case $mode in
 		hpkg=haskell-$pkg
 		install_pkg=0
 		while true; do
-            read "reply?Make and install package \`$pkg'? (y/n): "
-            case $reply in
-                [Yy])
+			read "reply?Make and install package \`$pkg'? (y/n): "
+			case $reply in
+				[Yy])
 					install_pkg=1
 					break
 					;;
-                [Nn]) break ;;
-                *) printf '%s\n' 'Please answer y or n.' ;;
-            esac
-        done
+				[Nn]) break ;;
+				*) printf '%s\n' 'Please answer y or n.' ;;
+			esac
+		done
 
 		if (( $install_pkg )); then
 			cd $hpkg
@@ -164,6 +173,10 @@ case $mode in
 	done
 	;;
 	*)
-	echo "Unrecognized <MODE>; valid ones are: initdb initdb-sync pkgbuild makepkg"
+	help_msg=(
+		"Unrecognized <MODE>; valid ones are:"
+		"initdb initdb-sync pkgbuild makepkg"
+		)
+	echo $help_msg
 	;;
 esac
