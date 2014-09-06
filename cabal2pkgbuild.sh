@@ -107,10 +107,12 @@ case $mode in
 	fi
 
 	# Add packages from Hackage
+	mkdir -p cache
 	for hp in $hackage_packages_file; do
 		# Grab latest version of package
 		cabal_file=$(curl -s $hackage_url/package/$hp | grep -ioE "Cabal source package[)<>/lia href=\"]+\/package\/.+\.cabal" | grep -ioE "\/package.+")
-		command="cblrepo add --patchdir patch --cbl-url $hackage_url$cabal_file"
+		[ ! -e cache$cabal_file ] && curl -# -C - -f $hackage_url$cabal_file -o cache$cabal_file --create-dirs
+		command="cblrepo add --patchdir patch -f cache$cabal_file"
 		echo $command
 		eval $command
 	done
@@ -153,8 +155,7 @@ case $mode in
 		if (( $install_pkg )); then
 			cd $hpkg
 			echo $hpkg
-			makepkg -sf
-			sudo pacman -U $hpkg-*.pkg.tar.xz
+			makepkg -sif
 			cd ..
 			echo
 			echo "  Finished making/installing package \`$hpkg'"
