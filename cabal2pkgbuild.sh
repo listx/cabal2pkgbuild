@@ -118,7 +118,7 @@ case $mode in
 		cabal_file=$(curl -s $hackage_url/package/$hp\
 			| grep -ioE "source package[)<>/lia href=\"]+\/package\/.+\.cabal"\
 			| grep -ioE "\/package.+")
-		[ ! -e cache$cabal_file ]\
+		[[ ! -e cache$cabal_file ]]\
 			&& curl -# -C - -f $hackage_url$cabal_file\
 			-o cache$cabal_file --create-dirs
 		command="cblrepo add --patchdir patch -f cache$cabal_file"
