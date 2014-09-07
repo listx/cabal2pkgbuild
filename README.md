@@ -3,6 +3,10 @@
 `cabal2pkgbuild` is a script used to generate proper PKGBUILD files from any `.cabal` file from Hackage, with the help of `cblrepo` (which is currently used to maintain Haskell packages on Arch Linux).
 `aria2` is used to download cabal files in parallel.
 
+## Installation
+
+This script is available on the [AUR](https://aur.archlinux.org/packages/cabal2pkgbuild-git/).
+
 ## Dependencies
 
 These are the following dependencies on Arch Linux:
