@@ -8,6 +8,41 @@ setopt errexit
 # http://www.zsh.org/mla/users/2008/msg01139.html
 setopt local_options no_nomatch
 
+pacman_to_cblrepo () {
+	# When invoking `pacman -Q PKGNAME`, PKGNAME must be lowercase.
+	pacman_friendly=(${@:l})
+	pvs=$(pacman -Q ${pacman_friendly/#/haskell-})
+	versions=()
+	typeset -A pkgs1
+	pkgs1=()
+	pkgs2=()
+	pkgs3=()
+	for pv in ${(f)pvs}; do
+		v=$(echo $pv | sed -e 's/^.\+ //' -e 's/-/,/')
+		versions+=($v)
+	done
+
+	# Use an associative array for saner substitutions.
+	for (( i = 1; i <= $#@; i++ )) do
+		pkgs1+=($@[i] $versions[i])
+	done
+
+	for k in ${(@k)pkgs1}; do
+		package="${k#haskell-},${pkgs1[$k]/-/,}"
+		pkgs2+=($package)
+	done
+
+	# We have to sort $pkgs2, because the array ordering is lost when we use
+	# Zsh's associative array with `typeset -A pkgs1`.
+	pkgs3=(${(o)pkgs2})
+	for pkg in $pkgs3; do
+		echo " " $pkg
+	done
+
+	echo "cblrepo add" ${pkgs3/#/--distro-pkg }
+	eval "cblrepo add" ${pkgs3/#/--distro-pkg }
+}
+
 if [[ -z $1 ]]; then
 	echo $usage
 	exit 1
@@ -21,9 +56,13 @@ if [[ -z $2 ]]; then
 	exit 1
 fi
 
+ghc_pkgs=()
+ghc_pkgs_lower_name_only=()
+hackage_pkgs=()
+
 hackage_url="http://hackage.haskell.org"
 hackage_packages_file=($(<$1))
-hackage_lowercased=($hackage_packages_file:l)
+hackage_lowered=($hackage_packages_file:l)
 
 mode=$2
 
@@ -46,64 +85,83 @@ case $mode in
 	# 'ghc' package. We put each package into an array.
 	provided=($(pacman -Qi ghc | grep Provides | cut -d ":" -f2))
 
+	echo "GHC packages to be added:"
 	for p in $provided; do
 		# Change the syntax to be compatible with cblrepo. The `cut` command here
 		# removes the 'haskell-' prefix for each package, and `sed` here replaces
 		# each '=' sign with a ',', as per cblrepo's requirements.
-		package=$(echo $p | cut -c9- | sed 's/=/,/')
-		command="cblrepo add --ghc-pkg $package"
-		echo $command
-		eval $command
+		package=$(echo $p | cut -c9- | sed 's/=.\+//')
+		version=$(echo $p | cut -c9- | sed 's/^.\+=//')
+		ghc_pkgs+=($package,$version)
+		ghc_pkgs_lower_name_only+=($package)
+		echo " " $package,$version
 	done
+	echo "cblrepo add" ${ghc_pkgs/#/--ghc-pkg }
+	eval "cblrepo add" ${ghc_pkgs/#/--ghc-pkg }
+	echo
 
 	# Add packages installed by the user from [haskell-core] or some other Arch
-	# Linux repository
-	installed=($(pacman -Qq | grep "^haskell-" | sed 's/^haskell-//'))
+	# Linux repository.
+	pacman_hackage=($(pacman -Qq | grep "^haskell-" | sed 's/^haskell-//'))
 	# Filter out those packages that were installed from Hackage using this very
 	# same script (in Arch Linux, the hackage packages, once installed, are in
 	# the format `haskell-<lowercased_package_name>'). This way, we avoid
 	# duplicate definitions and the packages added with --distro-pkg will really
-	# be those packages available from the distribution's official haskell
-	# repository.
-	installed_filtered=(${installed:|hackage_lowercased})
+	# be those packages *only* available from the distribution's official
+	# haskell repository.
+	distro=(${pacman_hackage:|hackage_lowered})
 
-	# Some packages have upper case letters in their names, but pacman only
-	# uses lower case, so it is necessary to filter these packages and add them
-	# to the database with their proper, mixed case names.
-	upperpkgs=(
+	hackage_only=(${pacman_hackage:|distro})
+	echo hackage_only: $hackage_only
+	echo
+	echo distro: $distro
+	echo
+
+	# Some packages have upper case letters in their names, but pacman only uses
+	# lowercase. To make cblrepo understand that, e.g., `QuickCheck` is the
+	# same as `quickcheck`, we add the uppercase version, NOT the lowercase version.
+	ghcpkgs_upper=(
 		$(ghc-pkg list --names-only --simple-output\
 			| tr ' ' '\n'\
 			| grep '[A-Z]')
 	)
-	upperpkgslower=(${upperpkgs:l})
-	# The following are the lower case packages
-	installed_filtered_lower=(${installed_filtered:|upperpkgslower})
-	# ghc-pkg, but not pacman, lists the following
-	installed_filtered_notpacman=(${upperpkgslower:|installed_filtered})
-	# The following are the upper case packages
-	installed_filtered_upper=(${upperpkgslower:|installed_filtered_notpacman})
+	ghcpkgs_upper_lowered=(${ghcpkgs_upper:l})
+	echo ghcpkgs_upper_lowered: $ghcpkgs_upper_lowered
+	echo
 
-	for p in $installed_filtered_lower; do
-		version=$(pacman -Q haskell-$p | cut -d " " -f2 | sed 's/-/,/')
-		command="cblrepo add --distro-pkg $p,$version"
-		echo $command
-		eval $command
-	done
+	# All pacman-recognized packages (haskell-*), but without the uppercase ones
+	# from `ghc-pkg list`.
+	distro_no_upper=(${distro:|ghcpkgs_upper_lowered})
+	# All pacman-recognized packages (haskell-*), which also happen to be uppercase.
+	distro_upper_only=(${distro:|distro_no_upper})
+	echo distro_no_upper: $distro_no_upper
+	echo
+	echo distro_upper_only: $distro_upper_only
+	echo
 
-	for pg in $upperpkgs; do
-		# Check if lower case version of name is in correct array, and return
-		# "" if not
-		p="${pg:l}"
-		# Do not carry on if there is no package in the pacman list
-		if [[ -z ${installed_filtered_upper[(r)$p]} ]]; then
+	# Same as distro_upper_only, but with the actual uppercase names.
+	distro_upper_actual=()
+	for p in $ghcpkgs_upper; do
+		p_lower=${p:l}
+		if [[ -z "${distro[(r)$p_lower]}" ]]; then
 			continue
 		fi
-		version=$(pacman -Q haskell-$p | cut -d " " -f2 | sed 's/-/,/')
-		command="cblrepo add --distro-pkg $pg,$version"
-		echo $command
-		eval $command
+		distro_upper_actual+=($p)
 	done
 
+	echo distro_upper_actual: $distro_upper_actual
+	echo
+
+	echo "Distribution (originally lowercase) packages to be added (1/2):"
+	[[ -n $distro_no_upper ]] && pacman_to_cblrepo $distro_no_upper
+
+	echo "Distribution (originally mixed case) packages to be added (2/2):"
+	[[ -n $distro_upper_actual ]] && pacman_to_cblrepo $distro_upper_actual
+
+	# We sync cblrepo with Hackage if the user requested it. This is an
+	# important step because we rely on cblrepo's knowledge of Hackage to
+	# download the latest packages. If cblrepo's cache is out of date, then this
+	# script's "latest" Hackage packages will also be out of date.
 	if [[ $mode == initdb-sync ]]; then
 		# Sync cblrepo with Hackage
 		echo -n "Syncing cblrepo with Hackage..."
@@ -112,19 +170,43 @@ case $mode in
 	fi
 
 	# Add packages from Hackage
+	echo "Adding packages from \`$1'"
 	mkdir -p cache
-	for hp in $hackage_packages_file; do
-		# Grab latest version of package
-		cabal_file=$(curl -s $hackage_url/package/$hp\
-			| grep -ioE "source package[)<>/lia href=\"]+\/package\/.+\.cabal"\
-			| grep -ioE "\/package.+")
-		[[ ! -e cache$cabal_file ]]\
-			&& curl -# -C - -f $hackage_url$cabal_file\
-			-o cache$cabal_file --create-dirs
-		command="cblrepo add --patchdir patch -f cache$cabal_file"
-		echo $command
-		eval $command
+	cabal_files=()
+	cabal_files_in_cache=()
+	cabal_file_urls=()
+	cabal_latest=($(cblrepo versions -l $hackage_packages_file))
+	cabal_urls=($(cblrepo urls $cabal_latest))
+	typeset -A aria_hash
+	aria_hash=()
+	for (( i = 1; i <= $#cabal_urls; i++ )) do
+		url=$cabal_urls[i]
+		name_version=${cabal_latest[i]/,/-}
+		cabal_file="cache/$name_version.cabal"
+		cabal_files+=($cabal_file)
+		aria_hash+=($cabal_file "$url\n  out=$cabal_file")
 	done
+
+	for (( i = 1; i <= $#cabal_files; i++ )) do
+		# If the proposed cabal file already exists in the cache, remove it from
+		# the downloads list.
+		[[ -e $cabal_files[i] ]] && unset "aria_hash[$cabal_files[i]]"
+	done
+
+	echo
+	echo "Downloading cabal files from Hackage..."
+	if [[ -n $aria_hash ]]; then
+		echo ${(F)aria_hash}
+		echo "Starting aria2c..."
+		echo ${(F)aria_hash} | aria2c -i -
+	else
+		echo "Nothing to download."
+		echo
+	fi
+
+
+	echo "cblrepo add --patchdir patch" ${cabal_files/#/-f }
+	eval "cblrepo add --patchdir patch" ${cabal_files/#/-f }
 
 	# Link the generated cblrepo.db file into ~/.cblrepo
 	ln -sf $PWD/cblrepo.db ~/.cblrepo/cblrepo.db
@@ -136,17 +218,12 @@ case $mode in
 	echo "Deleting old PKGBUILD directories..."
 	rm -rfv haskell-*
 
-	i=1
-	for hp in ${hackage_packages_file}; do
-		command="cblrepo pkgbuild --patchdir patch $hp"
-		echo "($i/${#hackage_packages_file}) $command"
-		eval $command
-		(( i+=1 ))
-	done
+	echo "cblrepo pkgbuild --patchdir patch $hackage_packages_file"
+	eval "cblrepo pkgbuild --patchdir patch $hackage_packages_file"
 	;;
 	### Create Arch Linux packages for the Hackage packages ###
 	(makepkg)
-	for pkg in ${hackage_lowercased}; do
+	for pkg in ${hackage_lowered}; do
 		hpkg=haskell-$pkg
 		install_pkg=0
 		while true; do
