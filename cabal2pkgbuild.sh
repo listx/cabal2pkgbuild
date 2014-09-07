@@ -173,8 +173,6 @@ case $mode in
 	echo "Adding packages from \`$1'"
 	mkdir -p cache
 	cabal_files=()
-	cabal_files_in_cache=()
-	cabal_file_urls=()
 	cabal_latest=($(cblrepo versions -l $hackage_packages_file))
 	cabal_urls=($(cblrepo urls $cabal_latest))
 	typeset -A aria_hash
