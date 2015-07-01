@@ -1,3 +1,8 @@
+# NOTICE
+
+This project is no longer maintained.
+Please have a look at using the Nix package manager which handles things in a much better way [here](http://funloop.org/post/2015-02-10-using-nix-from-arch.html).
+
 # cabal2pkgbuild
 
 `cabal2pkgbuild` is a script used to generate proper PKGBUILD files from any `.cabal` file from Hackage, with the help of `cblrepo` (which is currently used to maintain Haskell packages on Arch Linux).
