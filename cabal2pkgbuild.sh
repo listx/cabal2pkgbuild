@@ -28,7 +28,7 @@ pacman_to_cblrepo () {
 	done
 
 	for k in ${(@k)pkgs1}; do
-		package="${k#haskell-},${pkgs1[$k]/-/,}"
+		package="${k#haskell-},${pkgs1[$k]/[_-]/,}"
 		pkgs2+=($package)
 	done
 
@@ -71,8 +71,8 @@ case $mode in
 	(initdb|initdb-sync)
 	rm -fv cblrepo.db
 
-	# Add `ghc` itself
-	ghcversion=$(pacman -Q ghc | cut -d " " -f2 | sed 's/-/,/')
+	# Add `ghc` itself. Always use 0 as xrev for it.
+	ghcversion=$(pacman -Q ghc | cut -d " " -f2 | sed 's/-/,0,/')
 	command="cblrepo add --distro-pkg ghc,$ghcversion"
 	# Tell user what we are going to do.
 	echo $command
