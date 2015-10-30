@@ -6,7 +6,6 @@ Please have a look at using the Nix package manager which handles things in a mu
 # cabal2pkgbuild
 
 `cabal2pkgbuild` is a script used to generate proper PKGBUILD files from any `.cabal` file from Hackage, with the help of `cblrepo` (which is currently used to maintain Haskell packages on Arch Linux).
-`aria2` is used to download cabal files in parallel.
 
 ## Installation
 
@@ -17,7 +16,6 @@ This script is available on the [AUR](https://aur.archlinux.org/packages/cabal2p
 These are the following dependencies on Arch Linux:
 
 - cblrepo
-- aria2
 - coreutils
 - grep
 - pacman
@@ -42,7 +40,7 @@ Refer to the [cblrepo](https://github.com/magthe/cblrepo) documentation for furt
 
 ### Database Generation, PKGBUILD Creation, and Package Installation
 
-Go into `my-haskell-packages`, and create a file listing all Hackage packages, one on each line, that you'd like to create PKGBUIKLDs for.
+Go into `my-haskell-packages`, and create a file listing all Hackage packages, one on each line, that you'd like to create PKGBUIKLDs for. Optionally you can specify an explicit version through comma (`','`). So format of each line is `<package-name>[,<package-version>]`.
 This is called the `<hackage_packages_file>` file by convention.
 
 The following is a sample `<hackage_pacakges_file>` file:
@@ -53,7 +51,7 @@ bindings-GLFW
 GLFW-b
 transformers-compat
 contravariant
-distributive
+distributive,0.4.3.2
 comonad
 semigroupoids
 bifunctors

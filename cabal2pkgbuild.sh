@@ -28,7 +28,7 @@ pacman_to_cblrepo () {
 	done
 
 	for k in ${(@k)pkgs1}; do
-		package="${k#haskell-},${pkgs1[$k]/-/,}"
+		package="${k#haskell-},${pkgs1[$k]/[_-]/,}"
 		pkgs2+=($package)
 	done
 
@@ -71,8 +71,8 @@ case $mode in
 	(initdb|initdb-sync)
 	rm -fv cblrepo.db
 
-	# Add `ghc` itself
-	ghcversion=$(pacman -Q ghc | cut -d " " -f2 | sed 's/-/,/')
+	# Add `ghc` itself. Always use 0 as xrev for it.
+	ghcversion=$(pacman -Q ghc | cut -d " " -f2 | sed 's/-/,0,/')
 	command="cblrepo add --distro-pkg ghc,$ghcversion"
 	# Tell user what we are going to do.
 	echo $command
@@ -165,43 +165,49 @@ case $mode in
 	if [[ $mode == initdb-sync ]]; then
 		# Sync cblrepo with Hackage
 		echo -n "Syncing cblrepo with Hackage..."
-		cblrepo sync
+		cblrepo update
 		echo "done"
 	fi
 
 	# Add packages from Hackage
 	echo "Adding packages from \`$1'"
 	mkdir -p cache
+	typeset -A cabal_latest
+	cabal_latest=()
+	cabal_unknown=()
+
+	# For packages without explicit version - find latest version
+	for name in $hackage_packages_file; do
+		[[ ${name} == *,* ]] && continue
+		cabal_unknown+=("${name}")
+	done
+	for cabal_pkg in $(cblrepo versions -l "${cabal_unknown[@]}"); do
+		name=${cabal_pkg%%,*}
+		cabal_latest+=("$name" "$cabal_pkg")
+	done
+
+	# Prepare list of all packages with versions
+	cabal_pkgs=()
+	for name in $hackage_packages_file; do
+		if [[ ${name} == *,* ]]; then
+			cabal_pkgs+=("${name}")
+		else
+			cabal_pkgs+=("${cabal_latest[${name}]}")
+		fi
+	done
+
+	# Extract cabal files
 	cabal_files=()
-	cabal_latest=($(cblrepo versions -l $hackage_packages_file))
-	cabal_urls=($(cblrepo urls $cabal_latest))
-	typeset -A aria_hash
-	aria_hash=()
-	for (( i = 1; i <= $#cabal_urls; i++ )) do
-		url=$cabal_urls[i]
-		name_version=${cabal_latest[i]/,/-}
+	pushd cache
+	for (( i = 1; i <= $#cabal_pkgs; i++ )) do
+		name=${cabal_pkgs[i]%%,*}
+		name_version=${cabal_pkgs[i]/,/-}
+		cblrepo extract "${cabal_pkgs[i]}"
+		mv "${name}.cabal" "${name_version}.cabal"
 		cabal_file="cache/$name_version.cabal"
 		cabal_files+=($cabal_file)
-		aria_hash+=($cabal_file "$url\n  out=$cabal_file")
 	done
-
-	for (( i = 1; i <= $#cabal_files; i++ )) do
-		# If the proposed cabal file already exists in the cache, remove it from
-		# the downloads list.
-		[[ -e $cabal_files[i] ]] && unset "aria_hash[$cabal_files[i]]"
-	done
-
-	echo
-	echo "Downloading cabal files from Hackage..."
-	if [[ -n $aria_hash ]]; then
-		echo ${(F)aria_hash}
-		echo "Starting aria2c..."
-		echo ${(F)aria_hash} | aria2c -i -
-	else
-		echo "Nothing to download."
-		echo
-	fi
-
+	popd
 
 	echo "cblrepo add --patchdir patch" ${cabal_files/#/-f }
 	eval "cblrepo add --patchdir patch" ${cabal_files/#/-f }
