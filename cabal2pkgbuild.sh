@@ -165,7 +165,7 @@ case $mode in
 	if [[ $mode == initdb-sync ]]; then
 		# Sync cblrepo with Hackage
 		echo -n "Syncing cblrepo with Hackage..."
-		cblrepo sync
+		cblrepo update
 		echo "done"
 	fi
 
