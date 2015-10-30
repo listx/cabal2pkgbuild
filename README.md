@@ -6,7 +6,6 @@ Please have a look at using the Nix package manager which handles things in a mu
 # cabal2pkgbuild
 
 `cabal2pkgbuild` is a script used to generate proper PKGBUILD files from any `.cabal` file from Hackage, with the help of `cblrepo` (which is currently used to maintain Haskell packages on Arch Linux).
-`aria2` is used to download cabal files in parallel.
 
 ## Installation
 
@@ -17,7 +16,6 @@ This script is available on the [AUR](https://aur.archlinux.org/packages/cabal2p
 These are the following dependencies on Arch Linux:
 
 - cblrepo
-- aria2
 - coreutils
 - grep
 - pacman

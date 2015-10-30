@@ -174,34 +174,16 @@ case $mode in
 	mkdir -p cache
 	cabal_files=()
 	cabal_latest=($(cblrepo versions -l $hackage_packages_file))
-	cabal_urls=($(cblrepo urls $cabal_latest))
-	typeset -A aria_hash
-	aria_hash=()
-	for (( i = 1; i <= $#cabal_urls; i++ )) do
-		url=$cabal_urls[i]
+	pushd cache
+	for (( i = 1; i <= $#cabal_latest; i++ )) do
+		name=${cabal_latest[i]%%,*}
 		name_version=${cabal_latest[i]/,/-}
+		cblrepo extract "${cabal_latest[i]}"
+		mv "${name}.cabal" "${name_version}.cabal"
 		cabal_file="cache/$name_version.cabal"
 		cabal_files+=($cabal_file)
-		aria_hash+=($cabal_file "$url\n  out=$cabal_file")
 	done
-
-	for (( i = 1; i <= $#cabal_files; i++ )) do
-		# If the proposed cabal file already exists in the cache, remove it from
-		# the downloads list.
-		[[ -e $cabal_files[i] ]] && unset "aria_hash[$cabal_files[i]]"
-	done
-
-	echo
-	echo "Downloading cabal files from Hackage..."
-	if [[ -n $aria_hash ]]; then
-		echo ${(F)aria_hash}
-		echo "Starting aria2c..."
-		echo ${(F)aria_hash} | aria2c -i -
-	else
-		echo "Nothing to download."
-		echo
-	fi
-
+	popd
 
 	echo "cblrepo add --patchdir patch" ${cabal_files/#/-f }
 	eval "cblrepo add --patchdir patch" ${cabal_files/#/-f }
