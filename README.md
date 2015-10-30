@@ -40,7 +40,7 @@ Refer to the [cblrepo](https://github.com/magthe/cblrepo) documentation for furt
 
 ### Database Generation, PKGBUILD Creation, and Package Installation
 
-Go into `my-haskell-packages`, and create a file listing all Hackage packages, one on each line, that you'd like to create PKGBUIKLDs for.
+Go into `my-haskell-packages`, and create a file listing all Hackage packages, one on each line, that you'd like to create PKGBUIKLDs for. Optionally you can specify an explicit version through comma (`','`). So format of each line is `<package-name>[,<package-version>]`.
 This is called the `<hackage_packages_file>` file by convention.
 
 The following is a sample `<hackage_pacakges_file>` file:
@@ -51,7 +51,7 @@ bindings-GLFW
 GLFW-b
 transformers-compat
 contravariant
-distributive
+distributive,0.4.3.2
 comonad
 semigroupoids
 bifunctors

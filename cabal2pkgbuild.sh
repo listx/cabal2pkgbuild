@@ -172,13 +172,37 @@ case $mode in
 	# Add packages from Hackage
 	echo "Adding packages from \`$1'"
 	mkdir -p cache
+	typeset -A cabal_latest
+	cabal_latest=()
+	cabal_unknown=()
+
+	# For packages without explicit version - find latest version
+	for name in $hackage_packages_file; do
+		[[ ${name} == *,* ]] && continue
+		cabal_unknown+=("${name}")
+	done
+	for cabal_pkg in $(cblrepo versions -l "${cabal_unknown[@]}"); do
+		name=${cabal_pkg%%,*}
+		cabal_latest+=("$name" "$cabal_pkg")
+	done
+
+	# Prepare list of all packages with versions
+	cabal_pkgs=()
+	for name in $hackage_packages_file; do
+		if [[ ${name} == *,* ]]; then
+			cabal_pkgs+=("${name}")
+		else
+			cabal_pkgs+=("${cabal_latest[${name}]}")
+		fi
+	done
+
+	# Extract cabal files
 	cabal_files=()
-	cabal_latest=($(cblrepo versions -l $hackage_packages_file))
 	pushd cache
-	for (( i = 1; i <= $#cabal_latest; i++ )) do
-		name=${cabal_latest[i]%%,*}
-		name_version=${cabal_latest[i]/,/-}
-		cblrepo extract "${cabal_latest[i]}"
+	for (( i = 1; i <= $#cabal_pkgs; i++ )) do
+		name=${cabal_pkgs[i]%%,*}
+		name_version=${cabal_pkgs[i]/,/-}
+		cblrepo extract "${cabal_pkgs[i]}"
 		mv "${name}.cabal" "${name_version}.cabal"
 		cabal_file="cache/$name_version.cabal"
 		cabal_files+=($cabal_file)
